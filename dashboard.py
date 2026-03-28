@@ -534,9 +534,18 @@ for i, (sec, vals) in enumerate(sorted(sectors.items(), key=lambda x: -x[1]["ead
 
 # ── SAVE ────────────────────────────────────────────────────────────────────
 import os
-output_path = r"C:\Users\USER\Desktop\Python Projects\Creidtriskengine\ICAAP_Dashboard.xlsx"
+output_path = "ICAAP_Dashboard.xlsx"
 wb.save(output_path)
 print(f"\nDashboard saved to: {output_path}")
 print(f"Total exposures : {len(portfolio)}")
 print(f"Total EAD       : {total_ead:,.0f}")
 print(f"Sheets created  : Portfolio Detail | IRB Stress Test | Jurisdiction Comparison | Executive Summary")
+import json
+
+def convert(obj):
+    if hasattr(obj, "name"):
+        return obj.name
+    return str(obj)
+
+with open("portfolio.json", "w") as f:
+    json.dump(portfolio, f, indent=2, default=convert)
