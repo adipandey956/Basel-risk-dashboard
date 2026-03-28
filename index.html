@@ -8,7 +8,7 @@
 body {
   font-family: 'Segoe UI', sans-serif;
   margin:0;
-  background:#f5f7fb;
+  background: linear-gradient(135deg,#eef2ff,#f8fafc);
   color:#1e293b;
 }
 
@@ -18,7 +18,7 @@ body {
   gap:25px;
   padding:15px 30px;
   background:white;
-  box-shadow:0 2px 8px rgba(0,0,0,0.05);
+  box-shadow:0 2px 10px rgba(0,0,0,0.08);
 }
 .nav button {
   border:none;
@@ -28,7 +28,7 @@ body {
   color:#64748b;
 }
 .nav button.active {
-  color:#2563eb;
+  color:#1d4ed8;
   font-weight:600;
 }
 
@@ -47,6 +47,11 @@ body {
   padding:20px;
   border-radius:12px;
   box-shadow:0 4px 10px rgba(0,0,0,0.05);
+  transition: all 0.3s ease;
+}
+.kpi:hover {
+  transform: translateY(-6px) scale(1.03);
+  box-shadow:0 12px 25px rgba(0,0,0,0.15);
 }
 
 /* CHART */
@@ -56,6 +61,16 @@ body {
   background:white;
   border-radius:12px;
   box-shadow:0 4px 10px rgba(0,0,0,0.05);
+}
+
+/* FILTER */
+.filters {
+  display:flex;
+  gap:15px;
+  margin:15px 0;
+}
+select {
+  padding:8px;
 }
 
 /* TABLE */
@@ -76,7 +91,6 @@ th, td {
   background:white;
   padding:25px;
   border-radius:12px;
-  line-height:1.6;
 }
 </style>
 </head>
@@ -93,7 +107,14 @@ th, td {
 <!-- DASHBOARD -->
 <div id="dashboard" class="page active">
 <h2>Executive Dashboard</h2>
+
+<div class="filters">
 <select id="scenario"></select>
+<select id="view">
+<option value="irb">IRB</option>
+<option value="sa">Standardized</option>
+</select>
+</div>
 
 <div class="kpi-grid">
   <div class="kpi"><h4>Total EAD</h4><p id="ead"></p></div>
@@ -111,16 +132,22 @@ th, td {
 <h2>Risk Analytics</h2>
 <div id="countryChart" class="chart"></div>
 <div id="ratingChart" class="chart"></div>
-<div id="topRiskChart" class="chart"></div>
+<div id="topChart" class="chart"></div>
 </div>
 
 <!-- PORTFOLIO -->
 <div id="portfolio" class="page">
 <h2>Portfolio Drilldown</h2>
+
+<div class="filters">
+<select id="sectorFilter"></select>
+<select id="countryFilter"></select>
+</div>
+
 <table>
 <thead>
 <tr>
-<th>Name</th><th>Sector</th><th>EAD</th><th>RWA</th><th>PD</th><th>LGD</th>
+<th>Name</th><th>Sector</th><th>Country</th><th>EAD</th><th>RWA</th>
 </tr>
 </thead>
 <tbody id="table"></tbody>
@@ -130,80 +157,80 @@ th, td {
 <!-- ABOUT -->
 <div id="about" class="page">
 <div class="about">
-<h2>About This Project</h2>
-
-<p><b>Objective:</b><br>
-To simulate a real-world credit risk portfolio and analyze capital requirements under Basel frameworks.</p>
-
-<p><b>What was built:</b><br>
-- Synthetic multi-asset credit portfolio (Sovereign, Banks, Corporates, Retail)<br>
-- IRB-based RWA and capital calculation<br>
-- Standardized Approach comparison across jurisdictions<br>
-- Stress testing (Baseline, Adverse, Severe scenarios)<br>
-- Interactive dashboard for risk visualization</p>
-
-<p><b>Tech Stack:</b><br>
-Python, JSON, JavaScript (ECharts)</p>
-
-<p><b>Credits:</b><br>
-Leveraged the open-source library creditriskengine and built a full analytics + visualization layer on top.</p>
-
-<p><b>Outcome:</b><br>
-A complete end-to-end credit risk analytics platform demonstrating portfolio risk, capital sensitivity, and regulatory impact.</p>
-
+<h2>🚀 Credit Risk Analytics Platform</h2>
+<p>This project simulates a real-world credit portfolio and evaluates Basel capital requirements.</p>
+<ul>
+<li>IRB + Standardized RWA</li>
+<li>Stress Testing (Baseline, Adverse, Severe)</li>
+<li>Sector & Country Risk Insights</li>
+<li>Interactive Dashboard</li>
+</ul>
+<p>Powered by creditriskengine</p>
 </div>
 </div>
 
 <script>
 
-// NAV
 function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
   event.target.classList.add('active');
+  setTimeout(()=>window.dispatchEvent(new Event('resize')),200);
 }
 
-// FORMAT
-function fmt(x){
-  return new Intl.NumberFormat('en-IN',{maximumFractionDigits:0}).format(x);
-}
-function pct(x){
-  return Math.round(x*100) + "%";
-}
+function fmt(x){return new Intl.NumberFormat('en-IN',{maximumFractionDigits:0}).format(x);}
+function pct(x){return Math.round(x*100)+"%";}
 
-// LOAD
 fetch('./portfolio.json')
 .then(r=>r.json())
 .then(data=>{
 
-let scenarios=["baseline","Adverse","Severely Adverse"];
-let sel=document.getElementById("scenario");
-scenarios.forEach(s=>{
+let scenarioSel=document.getElementById("scenario");
+["baseline","Adverse","Severely Adverse"].forEach(s=>{
   let o=document.createElement("option");
   o.value=s;o.text=s;
-  sel.appendChild(o);
+  scenarioSel.appendChild(o);
 });
 
-function key(s){
-  if(s==="baseline") return "irb_rwa_baseline";
-  if(s==="Adverse") return "irb_rwa_Adverse";
-  return "irb_rwa_Severely Adverse";
+let sectorFilter=document.getElementById("sectorFilter");
+let countryFilter=document.getElementById("countryFilter");
+
+let sectors=[...new Set(data.map(d=>d.sector))];
+let countries=[...new Set(data.map(d=>d.country))];
+
+sectorFilter.innerHTML="<option value='all'>All Sectors</option>"+sectors.map(s=>`<option>${s}</option>`).join("");
+countryFilter.innerHTML="<option value='all'>All Countries</option>"+countries.map(s=>`<option>${s}</option>`).join("");
+
+let scChart=echarts.init(document.getElementById('scenarioChart'));
+let secChart=echarts.init(document.getElementById('sectorChart'));
+let countryChart=echarts.init(document.getElementById('countryChart'));
+let ratingChart=echarts.init(document.getElementById('ratingChart'));
+let topChart=echarts.init(document.getElementById('topChart'));
+
+function key(view,scenario){
+  if(view==="irb"){
+    if(scenario==="baseline") return "irb_rwa_baseline";
+    if(scenario==="Adverse") return "irb_rwa_Adverse";
+    return "irb_rwa_Severely Adverse";
+  }
+  return "sa_rwa_BCBS";
 }
 
-// CHART INSTANCES
-let scChart = echarts.init(document.getElementById('scenarioChart'));
-let secChart = echarts.init(document.getElementById('sectorChart'));
-let countryChart = echarts.init(document.getElementById('countryChart'));
-let ratingChart = echarts.init(document.getElementById('ratingChart'));
-let topChart = echarts.init(document.getElementById('topRiskChart'));
+function update(){
 
-function update(s){
+let scenario=scenarioSel.value;
+let view=document.getElementById("view").value;
 
-let k=key(s);
+let k=key(view,scenario);
 
-let totalEAD=data.reduce((a,b)=>a+b.ead,0);
-let totalRWA=data.reduce((a,b)=>a+(b[k]||0),0);
+let filtered=data.filter(d=>{
+  return (sectorFilter.value==="all"||d.sector===sectorFilter.value)
+      && (countryFilter.value==="all"||d.country===countryFilter.value);
+});
+
+let totalEAD=filtered.reduce((a,b)=>a+b.ead,0);
+let totalRWA=filtered.reduce((a,b)=>a+(b[k]||0),0);
 
 document.getElementById("ead").innerText=fmt(totalEAD);
 document.getElementById("rwa").innerText=fmt(totalRWA);
@@ -211,77 +238,85 @@ document.getElementById("cap").innerText=fmt(totalRWA*0.08);
 document.getElementById("avg").innerText=pct(totalRWA/totalEAD);
 
 /* SCENARIO */
-let scenData=scenarios.map(x=>data.reduce((a,b)=>a+(b[key(x)]||0),0));
+let scen=["baseline","Adverse","Severely Adverse"].map(s=>{
+  let kk=key(view,s);
+  return filtered.reduce((a,b)=>a+(b[kk]||0),0);
+});
+
+scChart.clear();
 scChart.setOption({
-  title:{text:"RWA by Scenario"},
-  xAxis:{type:'category',data:scenarios},
+  color:["#2563eb","#7c3aed","#06b6d4"],
+  xAxis:{type:'category',data:["Base","Adv","Sev"]},
   yAxis:{},
-  tooltip:{formatter:p=>fmt(p.value)},
-  series:[{type:'bar',data:scenData}]
-},true);
+  series:[{type:'bar',data:scen}]
+});
 
-/* SECTOR TOP 10 */
+/* SECTOR */
 let sector={};
-data.forEach(d=>sector[d.sector]=(sector[d.sector]||0)+(d[k]||0));
+filtered.forEach(d=>sector[d.sector]=(sector[d.sector]||0)+(d[k]||0));
 
-let sorted=Object.entries(sector).sort((a,b)=>b[1]-a[1]);
-let top=sorted.slice(0,10);
-let others=sorted.slice(10).reduce((a,b)=>a+b[1],0);
-if(others>0) top.push(["Others",others]);
+let sorted=Object.entries(sector).sort((a,b)=>b[1]-a[1]).slice(0,10);
 
+secChart.clear();
 secChart.setOption({
-  title:{text:"Top Sector Risk (RWA)"},
-  xAxis:{type:'category',data:top.map(x=>x[0])},
+  xAxis:{
+    type:'category',
+    data:sorted.map(x=>x[0]),
+    axisLabel:{interval:0,rotate:30}
+  },
   yAxis:{},
-  tooltip:{formatter:p=>fmt(p.value)},
-  series:[{type:'bar',data:top.map(x=>x[1])}]
-},true);
+  series:[{type:'bar',data:sorted.map(x=>x[1])}]
+});
 
 /* COUNTRY */
 let country={};
-data.forEach(d=>country[d.country]=(country[d.country]||0)+d.ead);
+filtered.forEach(d=>country[d.country]=(country[d.country]||0)+d.ead);
+
+countryChart.clear();
 countryChart.setOption({
-  title:{text:"Country Exposure"},
   series:[{type:'pie',data:Object.entries(country).map(x=>({name:x[0],value:x[1]}))}]
-},true);
+});
 
 /* RATING */
 let rating={};
-data.forEach(d=>rating[d.rating]=(rating[d.rating]||0)+1);
-ratingChart.setOption({
-  title:{text:"Rating Distribution"},
-  series:[{type:'pie',data:Object.entries(rating).map(x=>({name:x[0],value:x[1]}))}]
-},true);
+filtered.forEach(d=>rating[d.rating]=(rating[d.rating]||0)+1);
 
-/* TOP RISK */
-let topRisk=[...data].sort((a,b)=>b[k]-a[k]).slice(0,10);
+ratingChart.clear();
+ratingChart.setOption({
+  series:[{type:'pie',data:Object.entries(rating).map(x=>({name:x[0],value:x[1]}))}]
+});
+
+/* TOP */
+let top=[...filtered].sort((a,b)=>b[k]-a[k]).slice(0,10);
+
+topChart.clear();
 topChart.setOption({
-  title:{text:"Top 10 Risky Exposures"},
-  xAxis:{type:'category',data:topRisk.map(x=>x.name)},
+  xAxis:{type:'category',data:top.map(x=>x.name)},
   yAxis:{},
-  tooltip:{formatter:p=>fmt(p.value)},
-  series:[{type:'bar',data:topRisk.map(x=>x[k])}]
-},true);
+  series:[{type:'bar',data:top.map(x=>x[k])}]
+});
 
 /* TABLE */
 let tbody=document.getElementById("table");
 tbody.innerHTML="";
-data.slice(0,50).forEach(d=>{
-  tbody.innerHTML+=`
-  <tr>
-    <td>${d.name}</td>
-    <td>${d.sector}</td>
-    <td>${fmt(d.ead)}</td>
-    <td>${fmt(d[k])}</td>
-    <td>${pct(d.pd)}</td>
-    <td>${pct(d.lgd)}</td>
+filtered.slice(0,50).forEach(d=>{
+  tbody.innerHTML+=`<tr>
+  <td>${d.name}</td>
+  <td>${d.sector}</td>
+  <td>${d.country}</td>
+  <td>${fmt(d.ead)}</td>
+  <td>${fmt(d[k])}</td>
   </tr>`;
 });
 
 }
 
-update("baseline");
-sel.addEventListener("change",e=>update(e.target.value));
+scenarioSel.onchange=update;
+document.getElementById("view").onchange=update;
+sectorFilter.onchange=update;
+countryFilter.onchange=update;
+
+update();
 
 });
 </script>
