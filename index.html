@@ -37,7 +37,7 @@ fetch('./portfolio.json')
     // RWA by Scenario
     let baseline = data.reduce((sum, d) => sum + d.irb_rwa_baseline, 0);
     let adverse = data.reduce((sum, d) => sum + d.irb_rwa_Adverse, 0);
-    let severe = data.reduce((sum, d) => sum + d.irb_rwa_Severely Adverse, 0);
+    let severe = data.reduce((sum, d) => sum + d["irb_rwa_Severely Adverse"], 0);
 
     let rwaChart = echarts.init(document.getElementById('rwaChart'));
     rwaChart.setOption({
