@@ -5,30 +5,50 @@
 <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
 
 <style>
-body { font-family: Arial; margin:0; background:#f4f6fb; }
-
-.nav {
-  display:flex; gap:25px; padding:15px;
-  background:white; box-shadow:0 2px 6px rgba(0,0,0,0.1);
+body {
+  font-family: Arial;
+  margin:0;
+  background:#f4f6fb;
 }
-.nav button { border:none; background:none; cursor:pointer; }
 
+/* NAV */
+.nav {
+  display:flex;
+  gap:25px;
+  padding:15px;
+  background:white;
+  box-shadow:0 2px 6px rgba(0,0,0,0.1);
+}
+.nav button {
+  border:none;
+  background:none;
+  font-size:16px;
+  cursor:pointer;
+}
+
+/* PAGE */
 .page { display:none; padding:20px; }
 .page.active { display:block; }
 
+/* KPI */
 .kpi-grid {
   display:grid;
   grid-template-columns: repeat(4,1fr);
   gap:15px;
+  margin-top:15px;
 }
 .kpi {
-  background:white; padding:15px;
+  background:white;
+  padding:15px;
   border-radius:8px;
   box-shadow:0 2px 6px rgba(0,0,0,0.1);
   transition:0.2s;
 }
-.kpi:hover { transform:translateY(-3px); }
+.kpi:hover {
+  transform:translateY(-3px);
+}
 
+/* CHART */
 .chart {
   height:400px;
   background:white;
@@ -36,23 +56,24 @@ body { font-family: Arial; margin:0; background:#f4f6fb; }
   border-radius:8px;
 }
 
-/* 🔥 DRILLDOWN PANEL */
-.drill {
-  background:white;
-  margin-top:20px;
-  padding:15px;
-  border-radius:8px;
-  box-shadow:0 2px 6px rgba(0,0,0,0.1);
-}
-
+/* TABLE */
 table {
   width:100%;
   border-collapse:collapse;
-  margin-top:10px;
+  background:white;
+  margin-top:20px;
 }
 th, td {
-  padding:8px;
+  padding:10px;
   border-bottom:1px solid #ddd;
+}
+
+/* ABOUT */
+.about {
+  background:white;
+  padding:25px;
+  border-radius:8px;
+  line-height:1.6;
 }
 </style>
 </head>
@@ -75,31 +96,32 @@ th, td {
 <div class="kpi-grid">
   <div class="kpi"><b>Total EAD</b><p id="ead"></p></div>
   <div class="kpi"><b>Total RWA</b><p id="rwa"></p></div>
-  <div class="kpi"><b>Capital</b><p id="cap"></p></div>
+  <div class="kpi"><b>Capital (8%)</b><p id="cap"></p></div>
   <div class="kpi"><b>Avg RW</b><p id="avg"></p></div>
 </div>
 
 <div id="sectorChart" class="chart"></div>
 <div id="scenarioChart" class="chart"></div>
-
-<!-- 🔥 DRILLDOWN -->
-<div id="sectorDrill" class="drill"></div>
 </div>
 
 <!-- ANALYTICS -->
 <div id="analytics" class="page">
 <h2>Risk Analytics</h2>
 
+<h3>Exposure by Country (EAD)</h3>
 <div id="countryChart" class="chart"></div>
-<div id="ratingChart" class="chart"></div>
-<div id="topChart" class="chart"></div>
 
-<div id="exposureDrill" class="drill"></div>
+<h3>Exposure by Rating</h3>
+<div id="ratingChart" class="chart"></div>
+
+<h3>Top 10 Exposures by RWA</h3>
+<div id="topChart" class="chart"></div>
 </div>
 
 <!-- PORTFOLIO -->
 <div id="portfolio" class="page">
 <h2>Portfolio</h2>
+
 <table>
 <thead>
 <tr>
@@ -112,13 +134,32 @@ th, td {
 
 <!-- ABOUT -->
 <div id="about" class="page">
-<h2>About</h2>
-<p>Basel risk analytics dashboard with scenario analysis and drilldown capability.</p>
+<div class="about">
+<h2>About This Project</h2>
+
+<p><b>Objective:</b><br>
+To simulate a real-world credit risk portfolio and analyze Basel capital requirements.</p>
+
+<p><b>What was built:</b></p>
+<ul>
+<li>Multi-asset portfolio (Sovereign, Banks, Corporates)</li>
+<li>IRB-based RWA calculations</li>
+<li>Stress testing (Baseline, Adverse, Severe)</li>
+<li>Interactive analytics dashboard</li>
+</ul>
+
+<p><b>Tech Stack:</b><br>
+Python, JSON, JavaScript (ECharts)</p>
+
+<p><b>Outcome:</b><br>
+End-to-end credit risk analytics platform with scenario-based insights.</p>
+
+</div>
 </div>
 
 <script>
 
-let data=[];
+let data = [];
 
 function fmt(x){
   return new Intl.NumberFormat('en-IN',{maximumFractionDigits:0}).format(x);
@@ -127,10 +168,11 @@ function fmt(x){
 function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+
   if(id==="analytics") loadAnalytics();
 }
 
-/* LOAD */
+/* LOAD DATA */
 fetch('./portfolio.json')
 .then(r=>r.json())
 .then(d=>{
@@ -139,7 +181,8 @@ fetch('./portfolio.json')
   let sel=document.getElementById("scenario");
   ["baseline","Adverse","Severely Adverse"].forEach(s=>{
     let o=document.createElement("option");
-    o.value=s;o.text=s;
+    o.value=s;
+    o.text=s;
     sel.appendChild(o);
   });
 
@@ -159,15 +202,15 @@ let key =
   scenario==="Adverse" ? "irb_rwa_Adverse" :
   "irb_rwa_Severely Adverse";
 
-let totalEAD=data.reduce((a,b)=>a+b.ead,0);
-let totalRWA=data.reduce((a,b)=>a+(b[key]||0),0);
+let totalEAD = data.reduce((a,b)=>a+b.ead,0);
+let totalRWA = data.reduce((a,b)=>a+(b[key]||0),0);
 
 ead.innerText=fmt(totalEAD);
 rwa.innerText=fmt(totalRWA);
 cap.innerText=fmt(totalRWA*0.08);
 avg.innerText=Math.round((totalRWA/totalEAD)*100)+"%";
 
-/* SECTOR */
+/* SECTOR TOP 10 */
 let sector={};
 data.forEach(d=>{
   sector[d.sector]=(sector[d.sector]||0)+(d[key]||0);
@@ -177,48 +220,31 @@ let sorted=Object.entries(sector)
 .sort((a,b)=>b[1]-a[1])
 .slice(0,10);
 
-let chart=echarts.init(sectorChart);
-
-chart.setOption({
-title:{text:"Top Sector Risk (Click to Drilldown)"},
-xAxis:{type:'category',data:sorted.map(x=>x[0]),axisLabel:{rotate:30}},
+echarts.init(sectorChart).setOption({
+title:{text:"Top Sector Risk (RWA)"},
+tooltip:{},
+xAxis:{
+type:'category',
+data:sorted.map(x=>x[0]),
+axisLabel:{rotate:30}
+},
 yAxis:{},
-series:[{type:'bar',data:sorted.map(x=>x[1])}]
+series:[{
+type:'bar',
+data:sorted.map(x=>x[1])
+}]
 });
 
-/* 🔥 CLICK DRILLDOWN */
-chart.off('click');
-chart.on('click', function(params){
-  let sectorName=params.name;
-
-  let rows=data
-    .filter(d=>d.sector===sectorName)
-    .sort((a,b)=>b[key]-a[key])
-    .slice(0,10);
-
-  let html="<b>Top Exposures in "+sectorName+"</b><table>";
-  html+="<tr><th>Name</th><th>EAD</th><th>RWA</th></tr>";
-
-  rows.forEach(r=>{
-    html+=`<tr>
-      <td>${r.name}</td>
-      <td>${fmt(r.ead)}</td>
-      <td>${fmt(r[key])}</td>
-    </tr>`;
-  });
-
-  html+="</table>";
-
-  document.getElementById("sectorDrill").innerHTML=html;
-});
-
-/* SCENARIO */
+/* SCENARIO COMPARISON */
 let scenarios=["irb_rwa_baseline","irb_rwa_Adverse","irb_rwa_Severely Adverse"];
-let totals=scenarios.map(k=>data.reduce((a,b)=>a+(b[k]||0),0));
+
+let totals=scenarios.map(k=>
+data.reduce((a,b)=>a+(b[k]||0),0)
+);
 
 echarts.init(scenarioChart).setOption({
-title:{text:"Scenario Comparison"},
-xAxis:{type:'category',data:["Baseline","Adverse","Severe"]},
+title:{text:"Scenario Comparison (Total RWA)"},
+xAxis:{type:'category',data:["Baseline","Adverse","Severely Adverse"]},
 yAxis:{},
 series:[{type:'bar',data:totals}]
 });
@@ -227,44 +253,44 @@ series:[{type:'bar',data:totals}]
 /* ANALYTICS */
 function loadAnalytics(){
 
+/* COUNTRY */
 let country={};
 data.forEach(d=>country[d.country]=(country[d.country]||0)+d.ead);
 
 echarts.init(countryChart).setOption({
-series:[{type:'pie',data:Object.entries(country).map(x=>({name:x[0],value:x[1]}))}]
+series:[{
+type:'pie',
+data:Object.entries(country).map(x=>({name:x[0],value:x[1]}))
+}]
 });
 
+/* RATING */
 let rating={};
 data.forEach(d=>rating[d.rating]=(rating[d.rating]||0)+1);
 
 echarts.init(ratingChart).setOption({
-series:[{type:'pie',data:Object.entries(rating).map(x=>({name:x[0],value:x[1]}))}]
+series:[{
+type:'pie',
+data:Object.entries(rating).map(x=>({name:x[0],value:x[1]}))
+}]
 });
 
-/* TOP */
-let top=[...data].sort((a,b)=>b.irb_rwa_baseline-a.irb_rwa_baseline).slice(0,10);
+/* TOP 10 */
+let top=[...data]
+.sort((a,b)=>b.irb_rwa_baseline-a.irb_rwa_baseline)
+.slice(0,10);
 
-let chart=echarts.init(topChart);
-
-chart.setOption({
-title:{text:"Top Exposures (Click to Inspect)"},
-xAxis:{type:'category',data:top.map(x=>x.name),axisLabel:{rotate:30}},
+echarts.init(topChart).setOption({
+xAxis:{
+type:'category',
+data:top.map(x=>x.name),
+axisLabel:{rotate:30}
+},
 yAxis:{},
-series:[{type:'bar',data:top.map(x=>x.irb_rwa_baseline)}]
-});
-
-/* 🔥 CLICK DRILL */
-chart.off('click');
-chart.on('click', function(p){
-  let d=top[p.dataIndex];
-
-  let html=`<b>${d.name}</b><br>
-  Sector: ${d.sector}<br>
-  Country: ${d.country}<br>
-  EAD: ${fmt(d.ead)}<br>
-  RWA: ${fmt(d.irb_rwa_baseline)}`;
-
-  document.getElementById("exposureDrill").innerHTML=html;
+series:[{
+type:'bar',
+data:top.map(x=>x.irb_rwa_baseline)
+}]
 });
 }
 
