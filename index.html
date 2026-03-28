@@ -1,76 +1,53 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Basel Risk Command Center</title>
+<title>Basel Risk Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
 
 <style>
 body {
-  font-family: 'Segoe UI', sans-serif;
+  font-family: Arial;
   margin:0;
-  background: linear-gradient(135deg,#eef2ff,#ffffff);
-  color:#1e293b;
+  background:#f5f7fb;
 }
 
 /* NAV */
 .nav {
   display:flex;
-  gap:25px;
-  padding:15px 30px;
+  gap:20px;
+  padding:15px;
   background:white;
-  box-shadow:0 3px 12px rgba(0,0,0,0.08);
+  box-shadow:0 2px 8px rgba(0,0,0,0.1);
 }
 .nav button {
   border:none;
   background:none;
-  font-size:15px;
+  font-size:16px;
   cursor:pointer;
-  color:#64748b;
-}
-.nav button.active {
-  color:#4f46e5;
-  font-weight:600;
 }
 
 /* PAGE */
-.page { display:none; padding:25px; }
+.page { display:none; padding:20px; }
 .page.active { display:block; }
 
 /* KPI */
 .kpi-grid {
   display:grid;
   grid-template-columns: repeat(4,1fr);
-  gap:20px;
+  gap:15px;
 }
 .kpi {
   background:white;
-  padding:20px;
-  border-radius:14px;
-  box-shadow:0 6px 15px rgba(0,0,0,0.08);
-  transition: all 0.3s ease;
-}
-.kpi:hover {
-  transform: translateY(-6px) scale(1.04);
-  box-shadow:0 15px 30px rgba(0,0,0,0.15);
+  padding:15px;
+  border-radius:8px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.1);
 }
 
 /* CHART */
 .chart {
   height:400px;
-  margin-top:20px;
   background:white;
-  border-radius:14px;
-  box-shadow:0 6px 15px rgba(0,0,0,0.08);
-}
-
-/* FILTER */
-.filters {
-  display:flex;
-  gap:15px;
-  margin:15px 0;
-}
-select {
-  padding:8px;
+  margin-top:20px;
 }
 
 /* TABLE */
@@ -83,24 +60,14 @@ table {
 th, td {
   padding:10px;
   text-align:left;
-  border-bottom:1px solid #e2e8f0;
+  border-bottom:1px solid #ddd;
 }
 
 /* ABOUT */
-.about-grid {
-  display:grid;
-  grid-template-columns: repeat(2,1fr);
-  gap:20px;
-}
-.about-card {
+.about {
   background:white;
   padding:20px;
-  border-radius:12px;
-  box-shadow:0 5px 12px rgba(0,0,0,0.08);
-  transition:0.3s;
-}
-.about-card:hover {
-  transform:scale(1.03);
+  line-height:1.6;
 }
 </style>
 </head>
@@ -108,51 +75,45 @@ th, td {
 <body>
 
 <div class="nav">
-  <button onclick="showPage('dashboard')" class="active">Dashboard</button>
-  <button onclick="showPage('analytics')">Risk Analytics</button>
-  <button onclick="showPage('portfolio')">Portfolio</button>
-  <button onclick="showPage('about')">About</button>
+  <button onclick="show('dashboard')">Dashboard</button>
+  <button onclick="show('analytics')">Risk Analytics</button>
+  <button onclick="show('portfolio')">Portfolio</button>
+  <button onclick="show('about')">About</button>
 </div>
 
 <!-- DASHBOARD -->
 <div id="dashboard" class="page active">
 <h2>Executive Dashboard</h2>
 
-<div class="filters">
 <select id="scenario"></select>
-<select id="view">
-<option value="irb">IRB</option>
-<option value="sa">Standardized</option>
-</select>
-</div>
 
 <div class="kpi-grid">
-  <div class="kpi"><h4>Total EAD</h4><p id="ead"></p></div>
-  <div class="kpi"><h4>Total RWA</h4><p id="rwa"></p></div>
-  <div class="kpi"><h4>Capital</h4><p id="cap"></p></div>
-  <div class="kpi"><h4>Avg RW</h4><p id="avg"></p></div>
+  <div class="kpi"><b>Total EAD</b><p id="ead"></p></div>
+  <div class="kpi"><b>Total RWA</b><p id="rwa"></p></div>
+  <div class="kpi"><b>Capital (8%)</b><p id="cap"></p></div>
+  <div class="kpi"><b>Avg RW</b><p id="avg"></p></div>
 </div>
 
-<div id="scenarioChart" class="chart"></div>
 <div id="sectorChart" class="chart"></div>
 </div>
 
 <!-- ANALYTICS -->
 <div id="analytics" class="page">
 <h2>Risk Analytics</h2>
+
+<h3>Exposure by Country (EAD)</h3>
 <div id="countryChart" class="chart"></div>
+
+<h3>Exposure by Rating</h3>
 <div id="ratingChart" class="chart"></div>
+
+<h3>Top Exposures (RWA)</h3>
 <div id="topChart" class="chart"></div>
 </div>
 
 <!-- PORTFOLIO -->
 <div id="portfolio" class="page">
-<h2>Portfolio Drilldown</h2>
-
-<div class="filters">
-<select id="sectorFilter"></select>
-<select id="countryFilter"></select>
-</div>
+<h2>Portfolio</h2>
 
 <table>
 <thead>
@@ -166,148 +127,96 @@ th, td {
 
 <!-- ABOUT -->
 <div id="about" class="page">
-<h2>About Project</h2>
-<div class="about-grid">
+<div class="about">
+<h2>About This Project</h2>
 
-<div class="about-card">
-<h4>🎯 Objective</h4>
-<p>Simulate real-world credit risk portfolio and Basel capital.</p>
-</div>
+<p><b>Objective:</b><br>
+To simulate a real-world credit risk portfolio and evaluate capital requirements under Basel frameworks.</p>
 
-<div class="about-card">
-<h4>⚙️ Engine</h4>
-<p>IRB + Standardized RWA with stress testing.</p>
-</div>
+<p><b>What was built:</b></p>
+<ul>
+<li>Multi-asset portfolio (Sovereign, Banks, Corporates)</li>
+<li>IRB-based RWA calculations</li>
+<li>Stress scenarios (Baseline, Adverse, Severe)</li>
+<li>Interactive dashboard using ECharts</li>
+</ul>
 
-<div class="about-card">
-<h4>📊 Output</h4>
-<p>Interactive dashboard with analytics & insights.</p>
-</div>
+<p><b>Tech Stack:</b><br>
+Python, JSON, JavaScript</p>
 
-<div class="about-card">
-<h4>🧠 Stack</h4>
-<p>Python + JSON + JavaScript</p>
-</div>
+<p><b>Outcome:</b><br>
+End-to-end credit risk analytics platform demonstrating portfolio risk and capital sensitivity.</p>
 
 </div>
 </div>
 
 <script>
 
-let scChart, secChart, countryChart, ratingChart, topChart;
-let globalData = [];
+let data = [];
 
-function showPage(id){
+function show(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 
-  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
-  event.target.classList.add('active');
-
-  // Initialize charts ONLY when page opens
-  if(id==="analytics"){
-    setTimeout(initAnalyticsCharts,100);
-  }
+  if(id==="analytics") loadAnalytics();
 }
 
-function fmt(x){return new Intl.NumberFormat('en-IN',{maximumFractionDigits:0}).format(x);}
-function pct(x){return Math.round(x*100)+"%";}
+function fmt(x){
+  return new Intl.NumberFormat('en-IN',{maximumFractionDigits:0}).format(x);
+}
 
 fetch('./portfolio.json')
 .then(r=>r.json())
-.then(data=>{
-globalData = data;
+.then(d=>{
+  data = d;
 
-let scenarioSel=document.getElementById("scenario");
-["baseline","Adverse","Severely Adverse"].forEach(s=>{
-  let o=document.createElement("option");
-  o.value=s;o.text=s;
-  scenarioSel.appendChild(o);
+  let sel=document.getElementById("scenario");
+  ["baseline","Adverse","Severely Adverse"].forEach(s=>{
+    let o=document.createElement("option");
+    o.value=s;o.text=s;
+    sel.appendChild(o);
+  });
+
+  sel.onchange=update;
+
+  update();
+  loadPortfolio();
 });
 
-let sectors=[...new Set(data.map(d=>d.sector))];
-let countries=[...new Set(data.map(d=>d.country))];
-
-sectorFilter.innerHTML="<option value='all'>All</option>"+sectors.map(s=>`<option>${s}</option>`).join("");
-countryFilter.innerHTML="<option value='all'>All</option>"+countries.map(s=>`<option>${s}</option>`).join("");
-
-scChart = echarts.init(document.getElementById('scenarioChart'));
-secChart = echarts.init(document.getElementById('sectorChart'));
-
-update();
-});
-
-function key(view,scenario){
-if(view==="irb"){
-if(scenario==="baseline") return "irb_rwa_baseline";
-if(scenario==="Adverse") return "irb_rwa_Adverse";
-return "irb_rwa_Severely Adverse";
-}
-return "sa_rwa_BCBS";
-}
-
+/* DASHBOARD */
 function update(){
 
-let data=globalData;
-let scenario=scenario.value;
-let view=document.getElementById("view").value;
-let k=key(view,scenario);
-
-let totalEAD=data.reduce((a,b)=>a+b.ead,0);
-let totalRWA=data.reduce((a,b)=>a+(b[k]||0),0);
+let k="irb_rwa_baseline";
+let totalEAD = data.reduce((a,b)=>a+b.ead,0);
+let totalRWA = data.reduce((a,b)=>a+(b[k]||0),0);
 
 ead.innerText=fmt(totalEAD);
 rwa.innerText=fmt(totalRWA);
 cap.innerText=fmt(totalRWA*0.08);
-avg.innerText=pct(totalRWA/totalEAD);
-
-/* SCENARIO */
-let scen=["baseline","Adverse","Severely Adverse"].map(s=>{
-let kk=key(view,s);
-return data.reduce((a,b)=>a+(b[kk]||0),0);
-});
-
-scChart.setOption({
-color:["#4f46e5","#06b6d4","#22c55e"],
-xAxis:{type:'category',data:["Base","Adv","Sev"]},
-yAxis:{},
-series:[{type:'bar',data:scen}]
-});
+avg.innerText=Math.round((totalRWA/totalEAD)*100)+"%";
 
 /* SECTOR */
 let sector={};
-data.forEach(d=>sector[d.sector]=(sector[d.sector]||0)+(d[k]||0));
-
-let sorted=Object.entries(sector).sort((a,b)=>b[1]-a[1]).slice(0,10);
-
-secChart.setOption({
-xAxis:{
-type:'category',
-data:sorted.map(x=>x[0]),
-axisLabel:{interval:0,rotate:30}
-},
-yAxis:{},
-series:[{type:'bar',data:sorted.map(x=>x[1])}]
+data.forEach(d=>{
+  sector[d.sector]=(sector[d.sector]||0)+(d[k]||0);
 });
 
+let chart = echarts.init(document.getElementById('sectorChart'));
+chart.setOption({
+title:{text:"RWA by Sector"},
+xAxis:{type:'category',data:Object.keys(sector)},
+yAxis:{},
+series:[{type:'bar',data:Object.values(sector)}]
+});
 }
 
-/* ANALYTICS INIT */
-function initAnalyticsCharts(){
+/* ANALYTICS */
+function loadAnalytics(){
 
-if(!countryChart){
-countryChart = echarts.init(document.getElementById('countryChart'));
-ratingChart = echarts.init(document.getElementById('ratingChart'));
-topChart = echarts.init(document.getElementById('topChart'));
-}
-
-let data=globalData;
-
-/* COUNTRY */
 let country={};
 data.forEach(d=>country[d.country]=(country[d.country]||0)+d.ead);
 
-countryChart.setOption({
+echarts.init(countryChart).setOption({
 series:[{type:'pie',data:Object.entries(country).map(x=>({name:x[0],value:x[1]}))}]
 });
 
@@ -315,23 +224,36 @@ series:[{type:'pie',data:Object.entries(country).map(x=>({name:x[0],value:x[1]})
 let rating={};
 data.forEach(d=>rating[d.rating]=(rating[d.rating]||0)+1);
 
-ratingChart.setOption({
+echarts.init(ratingChart).setOption({
 series:[{type:'pie',data:Object.entries(rating).map(x=>({name:x[0],value:x[1]}))}]
 });
 
 /* TOP */
 let top=[...data].sort((a,b)=>b.irb_rwa_baseline-a.irb_rwa_baseline).slice(0,10);
 
-topChart.setOption({
+echarts.init(topChart).setOption({
 xAxis:{type:'category',data:top.map(x=>x.name)},
 yAxis:{},
 series:[{type:'bar',data:top.map(x=>x.irb_rwa_baseline)}]
 });
-
 }
 
-scenario.onchange=update;
-view.onchange=update;
+/* PORTFOLIO */
+function loadPortfolio(){
+let tbody=document.getElementById("table");
+tbody.innerHTML="";
+
+data.forEach(d=>{
+tbody.innerHTML+=`
+<tr>
+<td>${d.name}</td>
+<td>${d.sector}</td>
+<td>${d.country}</td>
+<td>${fmt(d.ead)}</td>
+<td>${fmt(d.irb_rwa_baseline||0)}</td>
+</tr>`;
+});
+}
 
 </script>
 
