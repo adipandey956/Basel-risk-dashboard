@@ -1,143 +1,247 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Basel Risk Dashboard</title>
+<title>Basel Risk Command Center</title>
 <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
 
 <style>
-body { font-family: Arial; margin: 0; background:#0f172a; color:white; }
-.container { padding:20px; }
+body {
+  font-family: 'Segoe UI', sans-serif;
+  margin:0;
+  background: linear-gradient(135deg,#0f172a,#1e293b);
+  color:white;
+}
 
-h1 { text-align:center; margin-bottom:20px; }
+/* NAVBAR */
+.nav {
+  display:flex;
+  gap:20px;
+  padding:15px 30px;
+  background:#020617;
+}
+.nav button {
+  background:none;
+  border:none;
+  color:#94a3b8;
+  font-size:16px;
+  cursor:pointer;
+}
+.nav button.active { color:white; }
 
+/* PAGES */
+.page { display:none; padding:20px; }
+.page.active { display:block; }
+
+/* KPI */
 .kpi-grid {
   display:grid;
   grid-template-columns: repeat(4,1fr);
-  gap:15px;
-  margin-bottom:20px;
+  gap:20px;
 }
-
 .kpi {
-  background:#1e293b;
-  padding:15px;
-  border-radius:10px;
+  background:rgba(255,255,255,0.05);
+  backdrop-filter: blur(10px);
+  padding:20px;
+  border-radius:15px;
 }
 
+/* CHART */
 .chart {
   height:400px;
-  background:#1e293b;
-  border-radius:10px;
-  margin-bottom:20px;
+  margin-top:20px;
+  background:rgba(255,255,255,0.05);
+  border-radius:15px;
 }
 
-select {
-  padding:8px;
-  margin-bottom:15px;
-}
+/* TABLE */
 table {
   width:100%;
   border-collapse:collapse;
-  background:#1e293b;
+  margin-top:20px;
 }
 th, td {
-  padding:8px;
+  padding:10px;
   border-bottom:1px solid #334155;
 }
 </style>
 </head>
 
 <body>
-<div class="container">
 
-<h1>Basel Risk Command Center</h1>
-
-<select id="scenario">
-  <option value="baseline">Baseline</option>
-  <option value="Adverse">Adverse</option>
-  <option value="Severely Adverse">Severely Adverse</option>
-</select>
-
-<div class="kpi-grid">
-  <div class="kpi"><h3>Total EAD</h3><p id="ead"></p></div>
-  <div class="kpi"><h3>Total RWA</h3><p id="rwa"></p></div>
-  <div class="kpi"><h3>Capital (8%)</h3><p id="cap"></p></div>
-  <div class="kpi"><h3>Avg RW</h3><p id="avg"></p></div>
+<div class="nav">
+  <button onclick="showPage('dashboard')" class="active">Dashboard</button>
+  <button onclick="showPage('analytics')">Risk Analytics</button>
+  <button onclick="showPage('portfolio')">Portfolio</button>
 </div>
 
-<div id="rwaChart" class="chart"></div>
-<div id="sectorChart" class="chart"></div>
+<!-- PAGE 1 -->
+<div id="dashboard" class="page active">
+  <h2>Executive Dashboard</h2>
 
-<table id="table">
-<thead>
-<tr>
-<th>Name</th><th>Sector</th><th>EAD</th><th>RWA</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
+  <select id="scenario"></select>
 
+  <div class="kpi-grid">
+    <div class="kpi"><h3>Total EAD</h3><p id="ead"></p></div>
+    <div class="kpi"><h3>Total RWA</h3><p id="rwa"></p></div>
+    <div class="kpi"><h3>Capital (8%)</h3><p id="cap"></p></div>
+    <div class="kpi"><h3>Avg RW</h3><p id="avg"></p></div>
+  </div>
+
+  <div id="scenarioChart" class="chart"></div>
+  <div id="sectorRWAChart" class="chart"></div>
+</div>
+
+<!-- PAGE 2 -->
+<div id="analytics" class="page">
+  <h2>Risk Analytics</h2>
+
+  <div id="countryChart" class="chart"></div>
+  <div id="ratingChart" class="chart"></div>
+</div>
+
+<!-- PAGE 3 -->
+<div id="portfolio" class="page">
+  <h2>Portfolio Drilldown</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Sector</th>
+        <th>EAD</th>
+        <th>RWA</th>
+        <th>PD</th>
+        <th>LGD</th>
+      </tr>
+    </thead>
+    <tbody id="table"></tbody>
+  </table>
 </div>
 
 <script>
+
+// NAVIGATION
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+// FORMATTERS
+function formatNumber(x){
+  if(!x) return "-";
+  return new Intl.NumberFormat('en-IN').format(x);
+}
+function formatPercent(x){
+  if(!x) return "-";
+  return (x*100).toFixed(2)+"%";
+}
+
+// LOAD DATA
 fetch('./portfolio.json')
-.then(res => res.json())
-.then(data => {
+.then(res=>res.json())
+.then(data=>{
+
+let scenarios = ["baseline","Adverse","Severely Adverse"];
+let select = document.getElementById("scenario");
+scenarios.forEach(s=>{
+  let opt=document.createElement("option");
+  opt.value=s;
+  opt.text=s;
+  select.appendChild(opt);
+});
+
+function getKey(s){
+  if(s==="baseline") return "irb_rwa_baseline";
+  if(s==="Adverse") return "irb_rwa_Adverse";
+  return "irb_rwa_Severely Adverse";
+}
 
 function update(scenario){
 
-let rwaKey = scenario==="baseline" ? "irb_rwa_baseline" :
-             scenario==="Adverse" ? "irb_rwa_Adverse" :
-             "irb_rwa_Severely Adverse";
+let key = getKey(scenario);
 
-let totalEAD = data.reduce((s,d)=>s+(d.ead||0),0);
-let totalRWA = data.reduce((s,d)=>s+(d[rwaKey]||0),0);
+let totalEAD = data.reduce((a,b)=>a+b.ead,0);
+let totalRWA = data.reduce((a,b)=>a+(b[key]||0),0);
 
-document.getElementById("ead").innerText = totalEAD.toFixed(0);
-document.getElementById("rwa").innerText = totalRWA.toFixed(0);
-document.getElementById("cap").innerText = (totalRWA*0.08).toFixed(0);
-document.getElementById("avg").innerText = (totalRWA/totalEAD).toFixed(2);
+document.getElementById("ead").innerText = formatNumber(totalEAD);
+document.getElementById("rwa").innerText = formatNumber(totalRWA);
+document.getElementById("cap").innerText = formatNumber(totalRWA*0.08);
+document.getElementById("avg").innerText = formatPercent(totalRWA/totalEAD);
 
-let sectors = {};
-data.forEach(d=>{
-  let s=d.sector||"Other";
-  sectors[s]=(sectors[s]||0)+(d.ead||0);
+/* SCENARIO CHART */
+let scenarioData = scenarios.map(s=>{
+  let k = getKey(s);
+  return data.reduce((a,b)=>a+(b[k]||0),0);
 });
 
-let sectorData = Object.keys(sectors).map(k=>({name:k,value:sectors[k]}));
-
-let chart1 = echarts.init(document.getElementById('rwaChart'));
-chart1.setOption({
-  title:{text:"RWA Distribution"},
-  xAxis:{type:"category",data:data.map(d=>d.name)},
+echarts.init(document.getElementById('scenarioChart')).setOption({
+  title:{text:"RWA by Scenario"},
+  tooltip:{formatter:p=>formatNumber(p.value)},
+  xAxis:{type:'category',data:scenarios},
   yAxis:{},
-  series:[{type:"bar",data:data.map(d=>d[rwaKey]||0)}]
+  series:[{type:'bar',data:scenarioData}]
 });
 
-let chart2 = echarts.init(document.getElementById('sectorChart'));
-chart2.setOption({
-  title:{text:"Sector EAD"},
-  series:[{type:"pie",data:sectorData}]
+/* SECTOR RWA */
+let sector={};
+data.forEach(d=>{
+  let s=d.sector;
+  sector[s]=(sector[s]||0)+(d[key]||0);
 });
 
-let tbody = document.querySelector("#table tbody");
+echarts.init(document.getElementById('sectorRWAChart')).setOption({
+  title:{text:"Sector Risk (RWA)"},
+  tooltip:{formatter:p=>formatNumber(p.value)},
+  xAxis:{type:'category',data:Object.keys(sector)},
+  yAxis:{},
+  series:[{type:'bar',data:Object.values(sector)}]
+});
+
+/* COUNTRY */
+let country={};
+data.forEach(d=>{
+  country[d.country]=(country[d.country]||0)+d.ead;
+});
+
+echarts.init(document.getElementById('countryChart')).setOption({
+  title:{text:"Country Exposure"},
+  series:[{type:'pie',data:Object.keys(country).map(k=>({name:k,value:country[k]}))}]
+});
+
+/* RATING */
+let rating={};
+data.forEach(d=>{
+  rating[d.rating]=(rating[d.rating]||0)+1;
+});
+
+echarts.init(document.getElementById('ratingChart')).setOption({
+  title:{text:"Rating Distribution"},
+  series:[{type:'pie',data:Object.keys(rating).map(k=>({name:k,value:rating[k]}))}]
+});
+
+/* TABLE */
+let tbody = document.getElementById("table");
 tbody.innerHTML="";
-data.slice(0,30).forEach(d=>{
-  let row = `<tr>
+data.slice(0,50).forEach(d=>{
+  tbody.innerHTML += `
+  <tr>
     <td>${d.name}</td>
     <td>${d.sector}</td>
-    <td>${d.ead}</td>
-    <td>${d[rwaKey]||0}</td>
+    <td>${formatNumber(d.ead)}</td>
+    <td>${formatNumber(d[key])}</td>
+    <td>${formatPercent(d.pd)}</td>
+    <td>${formatPercent(d.lgd)}</td>
   </tr>`;
-  tbody.innerHTML += row;
 });
 
 }
 
 update("baseline");
 
-document.getElementById("scenario").addEventListener("change", e=>{
-  update(e.target.value);
-});
+select.addEventListener("change", e=>update(e.target.value));
 
 });
 </script>
