@@ -1,69 +1,145 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Basel Risk Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
-    <style>
-        body {
-            font-family: Arial;
-            margin: 20px;
-            background: #f5f7fa;
-        }
-        h1 {
-            text-align: center;
-        }
-        .chart {
-            width: 100%;
-            height: 400px;
-            margin: 30px 0;
-            background: white;
-            border-radius: 10px;
-            padding: 10px;
-        }
-    </style>
-</head>
-<body>
+<title>Basel Risk Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
 
-<h1>Basel Risk Dashboard</h1>
+<style>
+body { font-family: Arial; margin: 0; background:#0f172a; color:white; }
+.container { padding:20px; }
+
+h1 { text-align:center; margin-bottom:20px; }
+
+.kpi-grid {
+  display:grid;
+  grid-template-columns: repeat(4,1fr);
+  gap:15px;
+  margin-bottom:20px;
+}
+
+.kpi {
+  background:#1e293b;
+  padding:15px;
+  border-radius:10px;
+}
+
+.chart {
+  height:400px;
+  background:#1e293b;
+  border-radius:10px;
+  margin-bottom:20px;
+}
+
+select {
+  padding:8px;
+  margin-bottom:15px;
+}
+table {
+  width:100%;
+  border-collapse:collapse;
+  background:#1e293b;
+}
+th, td {
+  padding:8px;
+  border-bottom:1px solid #334155;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>Basel Risk Command Center</h1>
+
+<select id="scenario">
+  <option value="baseline">Baseline</option>
+  <option value="Adverse">Adverse</option>
+  <option value="Severely Adverse">Severely Adverse</option>
+</select>
+
+<div class="kpi-grid">
+  <div class="kpi"><h3>Total EAD</h3><p id="ead"></p></div>
+  <div class="kpi"><h3>Total RWA</h3><p id="rwa"></p></div>
+  <div class="kpi"><h3>Capital (8%)</h3><p id="cap"></p></div>
+  <div class="kpi"><h3>Avg RW</h3><p id="avg"></p></div>
+</div>
 
 <div id="rwaChart" class="chart"></div>
 <div id="sectorChart" class="chart"></div>
+
+<table id="table">
+<thead>
+<tr>
+<th>Name</th><th>Sector</th><th>EAD</th><th>RWA</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+
+</div>
 
 <script>
 fetch('./portfolio.json')
 .then(res => res.json())
 .then(data => {
 
-    const baseline = data.reduce((s,d)=>s+(d.irb_rwa_baseline||0),0);
-    const adverse  = data.reduce((s,d)=>s+(d.irb_rwa_Adverse||0),0);
-    const severe   = data.reduce((s,d)=>s+(d["irb_rwa_Severely Adverse"]||0),0);
+function update(scenario){
 
-    const rwaChart = echarts.init(document.getElementById('rwaChart'));
-    rwaChart.setOption({
-        title: { text: 'RWA by Scenario' },
-        tooltip: {},
-        xAxis: { type: 'category', data: ['Baseline','Adverse','Severe'] },
-        yAxis: { type: 'value' },
-        series: [{ type: 'bar', data: [baseline, adverse, severe] }]
-    });
+let rwaKey = scenario==="baseline" ? "irb_rwa_baseline" :
+             scenario==="Adverse" ? "irb_rwa_Adverse" :
+             "irb_rwa_Severely Adverse";
 
-    const sectors = {};
-    data.forEach(d=>{
-        const s = d.sector || "Unknown";
-        sectors[s] = (sectors[s]||0) + (d.ead||0);
-    });
+let totalEAD = data.reduce((s,d)=>s+(d.ead||0),0);
+let totalRWA = data.reduce((s,d)=>s+(d[rwaKey]||0),0);
 
-    const pieData = Object.keys(sectors).map(k=>({name:k,value:sectors[k]}));
+document.getElementById("ead").innerText = totalEAD.toFixed(0);
+document.getElementById("rwa").innerText = totalRWA.toFixed(0);
+document.getElementById("cap").innerText = (totalRWA*0.08).toFixed(0);
+document.getElementById("avg").innerText = (totalRWA/totalEAD).toFixed(2);
 
-    const sectorChart = echarts.init(document.getElementById('sectorChart'));
-    sectorChart.setOption({
-        title: { text: 'EAD by Sector' },
-        tooltip: { trigger: 'item' },
-        series: [{ type:'pie', radius:'60%', data: pieData }]
-    });
+let sectors = {};
+data.forEach(d=>{
+  let s=d.sector||"Other";
+  sectors[s]=(sectors[s]||0)+(d.ead||0);
+});
 
-})
-.catch(err => console.error(err));
+let sectorData = Object.keys(sectors).map(k=>({name:k,value:sectors[k]}));
+
+let chart1 = echarts.init(document.getElementById('rwaChart'));
+chart1.setOption({
+  title:{text:"RWA Distribution"},
+  xAxis:{type:"category",data:data.map(d=>d.name)},
+  yAxis:{},
+  series:[{type:"bar",data:data.map(d=>d[rwaKey]||0)}]
+});
+
+let chart2 = echarts.init(document.getElementById('sectorChart'));
+chart2.setOption({
+  title:{text:"Sector EAD"},
+  series:[{type:"pie",data:sectorData}]
+});
+
+let tbody = document.querySelector("#table tbody");
+tbody.innerHTML="";
+data.slice(0,30).forEach(d=>{
+  let row = `<tr>
+    <td>${d.name}</td>
+    <td>${d.sector}</td>
+    <td>${d.ead}</td>
+    <td>${d[rwaKey]||0}</td>
+  </tr>`;
+  tbody.innerHTML += row;
+});
+
+}
+
+update("baseline");
+
+document.getElementById("scenario").addEventListener("change", e=>{
+  update(e.target.value);
+});
+
+});
 </script>
 
 </body>
