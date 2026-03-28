@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Basel Risk Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+    <style>
+        body {
+            font-family: Arial;
+            margin: 20px;
+            background: #f5f7fa;
+        }
+        h1 {
+            text-align: center;
+        }
+        .chart {
+            width: 100%;
+            height: 400px;
+            margin: 30px 0;
+            background: white;
+            border-radius: 10px;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Basel Risk Dashboard</h1>
+
+<div id="rwaChart" class="chart"></div>
+<div id="sectorChart" class="chart"></div>
+
+<script>
+fetch('portfolio.json')
+.then(response => response.json())
+.then(data => {
+
+    // RWA by Scenario
+    let baseline = data.reduce((sum, d) => sum + d.irb_rwa_baseline, 0);
+    let adverse = data.reduce((sum, d) => sum + d.irb_rwa_Adverse, 0);
+    let severe = data.reduce((sum, d) => sum + d.irb_rwa_Severely Adverse, 0);
+
+    let rwaChart = echarts.init(document.getElementById('rwaChart'));
+    rwaChart.setOption({
+        title: { text: 'RWA by Scenario' },
+        tooltip: {},
+        xAxis: { type: 'category', data: ['Baseline', 'Adverse', 'Severe'] },
+        yAxis: { type: 'value' },
+        series: [{
+            data: [baseline, adverse, severe],
+            type: 'bar'
+        }]
+    });
+
+    // Sector Breakdown
+    let sectors = {};
+    data.forEach(d => {
+        if (!sectors[d.sector]) sectors[d.sector] = 0;
+        sectors[d.sector] += d.ead;
+    });
+
+    let sectorData = Object.keys(sectors).map(k => ({
+        name: k,
+        value: sectors[k]
+    }));
+
+    let sectorChart = echarts.init(document.getElementById('sectorChart'));
+    sectorChart.setOption({
+        title: { text: 'EAD by Sector' },
+        tooltip: { trigger: 'item' },
+        series: [{
+            type: 'pie',
+            radius: '60%',
+            data: sectorData
+        }]
+    });
+
+});
+</script>
+
+</body>
+</html>
